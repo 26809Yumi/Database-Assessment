@@ -189,3 +189,49 @@ def delete_recipe():
         print("Deletion cancelled.")
 
     conn.close()
+
+# Main Menu
+def menu():
+    """Displays the application menu."""
+
+    while True:
+        print("\n")
+        print("=" * 50)
+        print("      RECIPE ORGANIZER SYSTEM")
+        print("=" * 50)
+        print("1. Add Recipe")
+        print("2. View Recipes")
+        print("3. Search Recipe")
+        print("4. Update Recipe")
+        print("5. Delete Recipe")
+        print("6. Exit")
+        print("=" * 50)
+
+        choice = input("Choose an option (1-6): ")
+
+        if choice == "1":
+            add_recipe()
+
+        elif choice == "2":
+            view_recipes()
+
+        elif choice == "3":
+            search_recipe()
+
+        elif choice == "4":
+            update_recipe()
+
+        elif choice == "5":
+            delete_recipe()
+
+        elif choice == "6":
+            print("Thank you for using Recipe Organizer!")
+            break
+
+        else:
+            print("Invalid option. Please try again.")
+
+# Program Entry Point
+if __name__ == "__main__":
+    create_database()
+    menu()

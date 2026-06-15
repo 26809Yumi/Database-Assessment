@@ -104,3 +104,52 @@ def search_recipe():
         print(f"Ingredients: {recipe[2]}")
         print(f"Instructions: {recipe[3]}")
         print("=" * 40)
+
+# Update Recipe
+def update_recipe():
+    """Updates an existing recipe."""
+
+    view_recipes()
+
+    try:
+        recipe_id = int(input("\nEnter Recipe ID to update: "))
+    except ValueError:
+        print("Please enter a valid number.")
+        return
+
+    conn = sqlite3.connect("recipes.db")
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM recipes WHERE id = ?", (recipe_id,))
+    recipe = cursor.fetchone()
+
+    if not recipe:
+        print("Recipe not found.")
+        conn.close()
+        return
+
+    print("\nLeave field blank to keep current value.")
+
+    new_name = input(f"New Name [{recipe[1]}]: ").strip()
+    new_ingredients = input(f"New Ingredients [{recipe[2]}]: ").strip()
+    new_instructions = input(f"New Instructions [{recipe[3]}]: ").strip()
+
+    if not new_name:
+        new_name = recipe[1]
+
+    if not new_ingredients:
+        new_ingredients = recipe[2]
+
+    if not new_instructions:
+        new_instructions = recipe[3]
+
+    cursor.execute("""
+    UPDATE recipes
+    SET name = ?, ingredients = ?, instructions = ?
+    WHERE id = ?
+    """, (new_name, new_ingredients, new_instructions, recipe_id))
+
+    conn.commit()
+    conn.close()
+
+    print("Recipe updated successfully!")

@@ -46,7 +46,7 @@ def add_recipe():
     conn.close()
 
     print("Recipe added successfully!")
-    
+
     # View Recipes
 def view_recipes():
     """Displays all stored recipes."""
@@ -66,6 +66,38 @@ def view_recipes():
         return
 
     for recipe in recipes:
+        print("\n" + "=" * 40)
+        print(f"ID: {recipe[0]}")
+        print(f"Name: {recipe[1]}")
+        print(f"Ingredients: {recipe[2]}")
+        print(f"Instructions: {recipe[3]}")
+        print("=" * 40)
+
+# Search Recipe
+def search_recipe():
+    """Searches for recipes by name."""
+
+    keyword = input("\nEnter recipe name to search: ").strip()
+
+    conn = sqlite3.connect("recipes.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT * FROM recipes
+    WHERE name LIKE ?
+    """, ('%' + keyword + '%',))
+
+    results = cursor.fetchall()
+
+    conn.close()
+
+    if not results:
+        print("No matching recipes found.")
+        return
+
+    print("\nSearch Results:")
+
+    for recipe in results:
         print("\n" + "=" * 40)
         print(f"ID: {recipe[0]}")
         print(f"Name: {recipe[1]}")

@@ -19,3 +19,30 @@ def create_database():
 
     conn.commit()
     conn.close()
+    
+# Allow users to add in new recipes
+def add_recipe():
+    """Allows the user to add a new recipe."""
+
+    print("\n--- Add New Recipe ---")
+
+    name = input("Enter recipe name: ").strip()
+    ingredients = input("Enter ingredients (separate with commas): ").strip()
+    instructions = input("Enter cooking instructions: ").strip()
+
+    if not name or not ingredients or not instructions:
+        print("Error: All fields are required.")
+        return
+
+    conn = sqlite3.connect("recipes.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    INSERT INTO recipes (name, ingredients, instructions)
+    VALUES (?, ?, ?)
+    """, (name, ingredients, instructions))
+
+    conn.commit()
+    conn.close()
+
+    print("Recipe added successfully!")

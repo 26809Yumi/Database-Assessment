@@ -19,7 +19,7 @@ def create_database():
 
     conn.commit()
     conn.close()
-    
+
 # Allow users to add in new recipes
 def add_recipe():
     """Allows the user to add a new recipe."""
@@ -46,3 +46,29 @@ def add_recipe():
     conn.close()
 
     print("Recipe added successfully!")
+    
+    # View Recipes
+def view_recipes():
+    """Displays all stored recipes."""
+
+    print("\n--- Stored Recipes ---")
+
+    conn = sqlite3.connect("recipes.db")
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM recipes")
+    recipes = cursor.fetchall()
+
+    conn.close()
+
+    if not recipes:
+        print("No recipes found.")
+        return
+
+    for recipe in recipes:
+        print("\n" + "=" * 40)
+        print(f"ID: {recipe[0]}")
+        print(f"Name: {recipe[1]}")
+        print(f"Ingredients: {recipe[2]}")
+        print(f"Instructions: {recipe[3]}")
+        print("=" * 40)

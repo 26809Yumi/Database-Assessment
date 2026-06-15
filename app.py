@@ -153,3 +153,39 @@ def update_recipe():
     conn.close()
 
     print("Recipe updated successfully!")
+
+# Delete Recipe
+def delete_recipe():
+    """Deletes a recipe from the database."""
+
+    view_recipes()
+
+    try:
+        recipe_id = int(input("\nEnter Recipe ID to delete: "))
+    except ValueError:
+        print("Please enter a valid number.")
+        return
+
+    conn = sqlite3.connect("recipes.db")
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM recipes WHERE id = ?", (recipe_id,))
+    recipe = cursor.fetchone()
+
+    if not recipe:
+        print("Recipe not found.")
+        conn.close()
+        return
+
+    confirm = input(
+        f"Are you sure you want to delete '{recipe[1]}'? (y/n): "
+    ).lower()
+
+    if confirm == "y":
+        cursor.execute("DELETE FROM recipes WHERE id = ?", (recipe_id,))
+        conn.commit()
+        print("Recipe deleted successfully.")
+    else:
+        print("Deletion cancelled.")
+
+    conn.close()

@@ -3,12 +3,16 @@ import sqlite3
 DB_NAME = "recipes.db"
 
 
+def get_db_connection():
+    """Helper function to connect and ensure foreign keys are enabled."""
+    conn = sqlite3.connect(DB_NAME)
+    conn.execute("PRAGMA foreign_keys = ON;")
+    return conn
+
+
 # Adding new recipe(s)
 def add_recipe():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
     print("\n--- ADD RECIPE ---")
-
     recipe_name = input("Recipe name: ").strip()
     category = input("Category: ").strip()
 
@@ -22,141 +26,154 @@ def add_recipe():
     instructions = input("Instructions: ").strip()
 
     try:
-        with sqlite3.connect(DB_NAME) as conn:
+        # Using a context manager ensures commits happen automatically if successful
+        with get_db_connection() as conn:
             cursor = conn.cursor()
 
-            cursor.execute("""
-                INSERT INTO recipes
-                (recipe_name, category, cooking_time, instructions)
+            cursor.execute(
+                """
+                INSERT INTO recipes (recipe_name, category, cooking_time, instructions)
                 VALUES (?, ?, ?, ?)
-            """, (recipe_name, category, cooking_time, instructions))
+            """,
+                (recipe_name, category, cooking_time, instructions),
+            )
 
             recipe_id = cursor.lastrowid
 
             print("\n--- ADD INGREDIENTS (type 'done' to finish) ---")
-
             while True:
                 ingredient_name = input("Ingredient: ").strip()
-
                 if ingredient_name.lower() == "done":
                     break
 
                 quantity = input("Quantity: ").strip()
 
-                cursor.execute("""
-                    INSERT INTO ingredients
-                    (ingredients_name, quantity, recipe_id)
+                cursor.execute(
+                    """
+                    INSERT INTO ingredients (ingredients_name, quantity, recipe_id)
                     VALUES (?, ?, ?)
-                """, (ingredient_name, quantity, recipe_id))
+                """,
+                    (ingredient_name, quantity, recipe_id),
+                )
 
         print("Recipe added successfully!")
-
     except sqlite3.Error as e:
         print(f"Database error: {e}")
-    conn.close()
+
 
 # Viewing all recipe(s)
 def view_recipes():
-    conn = sqlite3.connect(DB_NAME)
+    conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
-    SELECT *
-    FROM recipes
-    JOIN ingredients
-    ON recipes.recipe_id = ingredients.recipe_id
-    ORDER BY recipes.recipe_id;
-    """)
+    cursor.execute(
+        """
+        SELECT recipes.recipe_id, recipe_name, category, cooking_time, instructions,
+               ingredients_name, quantity
+        FROM recipes
+        LEFT JOIN ingredients ON recipes.recipe_id = ingredients.recipe_id
+        ORDER BY recipes.recipe_id;
+    """
+    )
 
     rows = cursor.fetchall()
+    conn.close()
 
     if not rows:
         print("No recipes found.")
-        conn.close()
         return
 
-    current = None
-
+    current_recipe_id = None
     for row in rows:
-        if row[0] != current:
+        # Check if we have moved to a new recipe
+        if row[0] != current_recipe_id:
             print("\n======================")
-            print("Recipe ID:", row[0])
-            print("Name:", row[1])
-            print("Category:", row[2])
-            print("Time:", row[3])
-            print("Instructions:", row[4])
+            print(f"Recipe ID: {row[0]}")
+            print(f"Name: {row[1]}")
+            print(f"Category: {row[2]}")
+            print(f"Time: {row[3]} mins")
+            print(f"Instructions: {row[4]}")
             print("Ingredients:")
-            current = row[0]
+            current_recipe_id = row[0]
 
-        print(" -", row[6], ":", row[7])
+        # Print ingredient if it exists (handles recipes without ingredients)
+        if row[5]:
+            print(f" - {row[5]}: {row[6]}")
 
-    conn.close()
 
 # Searching recipe(s)
 def search_recipe():
-    conn = sqlite3.connect(DB_NAME)
+    name = input("Enter recipe name to search: ").strip()
+
+    conn = get_db_connection()
     cursor = conn.cursor()
 
-    name = input("Enter recipe name: ")
-
-    cursor.execute("""
-    SELECT *
-    FROM recipes
-    JOIN ingredients
-    ON recipes.recipe_id = ingredients.recipe_id
-    ORDER BY recipes.recipe_id;
-    """)
-
+    # Fixed: Added a WHERE clause to actually filter by name
+    cursor.execute(
+        """
+        SELECT recipes.recipe_id, recipe_name, category, cooking_time, instructions,
+               ingredients_name, quantity
+        FROM recipes
+        LEFT JOIN ingredients ON recipes.recipe_id = ingredients.recipe_id
+        WHERE recipe_name LIKE ?
+        ORDER BY recipes.recipe_id;
+    """,
+        (f"%{name}%",),
+    )
 
     rows = cursor.fetchall()
+    conn.close()
 
     if not rows:
-        print("Recipe not found.")
-        conn.close()
+        print("No matching recipes found.")
         return
 
-    print("\n======================")
-    print("Recipe ID:", rows[0][0])
-    print("Name:", rows[0][1])
-    print("Category:", rows[0][2])
-    print("Time:", rows[0][3])
-    print("Instructions:", rows[0][4])
-    print("Ingredients:")
-
+    current_recipe_id = None
     for row in rows:
-        print(" -", row[6], ":", row[7])
+        if row[0] != current_recipe_id:
+            print("\n======================")
+            print(f"Recipe ID: {row[0]}")
+            print(f"Name: {row[1]}")
+            print(f"Category: {row[2]}")
+            print(f"Time: {row[3]} mins")
+            print(f"Instructions: {row[4]}")
+            print("Ingredients:")
+            current_recipe_id = row[0]
 
-    conn.close()
+        if row[5]:
+            print(f" - {row[5]}: {row[6]}")
+
 
 # Deleting recipes
 def delete_recipe():
-    conn = sqlite3.connect(DB_NAME)
+    conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
-    SELECT *
-    FROM recipes
-    JOIN ingredients
-    ON recipes.recipe_id = ingredients.recipe_id
-    ORDER BY recipes.recipe_id;
-    """)
-
+    # Show simplified list for deletion overview
+    cursor.execute("SELECT recipe_id, recipe_name FROM recipes;")
     rows = cursor.fetchall()
 
-    if rows:
-        print("\n--- CURRENT RECIPES ---")
-        for row in rows:
-            print(f"{row[0]} | {row[1]} | {row[6]} - {row[7]}")
+    if not rows:
+        print("No recipes available to delete.")
+        conn.close()
+        return
 
-    recipe_id = input("\nEnter recipe ID to delete: ")
+    print("\n--- CURRENT RECIPES ---")
+    for row in rows:
+        print(f"ID: {row[0]} | Name: {row[1]}")
 
-    cursor.execute("DELETE FROM ingredients WHERE recipe_id = ?", (recipe_id,))
-    cursor.execute("DELETE FROM recipes WHERE recipe_id = ?", (recipe_id,))
+    recipe_id = input("\nEnter recipe ID to delete: ").strip()
 
-    conn.commit()
-    conn.close()
-
-    print("Recipe deleted!")
+    try:
+        # Delete ingredients first to maintain integrity, then the recipe
+        cursor.execute("DELETE FROM ingredients WHERE recipe_id = ?", (recipe_id,))
+        cursor.execute("DELETE FROM recipes WHERE recipe_id = ?", (recipe_id,))
+        conn.commit()
+        print("Recipe deleted!")
+    except sqlite3.Error as e:
+        print(f"Database error during deletion: {e}")
+    finally:
+        conn.close()
 
 
 # The main menu
@@ -169,7 +186,7 @@ def menu():
         print("4. Delete Recipe")
         print("5. Exit")
 
-        choice = input("Choose: ")
+        choice = input("Choose: ").strip()
 
         if choice == "1":
             add_recipe()
@@ -180,9 +197,11 @@ def menu():
         elif choice == "4":
             delete_recipe()
         elif choice == "5":
+            print("Goodbye!")
             break
         else:
             print("Invalid option")
 
-menu()
 
+if __name__ == "__main__":
+    menu()
